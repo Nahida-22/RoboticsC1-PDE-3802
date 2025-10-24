@@ -4,7 +4,7 @@ import os
 OUTPUT_BASE_DIR = os.path.join(os.getcwd(), "raw")
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)
 
-CATEGORIES = [ "pencilBox"]
+CATEGORIES = [ "pencilcase"]
 
 for category in CATEGORIES:
     folder = os.path.join(OUTPUT_BASE_DIR, category)
