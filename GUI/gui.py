@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image
+from PIL import Image, ImageTk
 import cv2
 import threading
 import os
@@ -8,18 +8,20 @@ import numpy as np
 import torch
 from torchvision import transforms, models
 from torch import nn
+import time 
 
-# configuration
+# ------------------- CONFIG -------------------
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-ASSET_PATH = "/Users/adrianpothanah/python_gui/assets"
-MODELS_PATH = "/Users/adrianpothanah/python_gui/models"
+ASSET_PATH = r"C:\Users\23052\Desktop\CLONE TEST\RoboticsC1-PDE-3802\GUI\assets"
+MODELS_PATH = r"C:\Users\23052\Desktop\CLONE TEST\RoboticsC1-PDE-3802\models"
 
 CLASSES = ['eraser', 'glueStick', 'mouse', 'paperClip', 'pen', 
            'pencilBox', 'pencilSharpener', 'scissor', 'stapler', 'waterBottle']
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 preprocess = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -29,24 +31,30 @@ preprocess = transforms.Compose([
 ])
 
 # Load ResNet50 model
-MODEL_PATH = os.path.join(MODELS_PATH, "/Users/adrianpothanah/Coursework1-Robotics/RoboticsC1-PDE-3802/models/best_resNet50_office_classifier.pth")
+MODEL_PATH = os.path.join(MODELS_PATH, "best_resNet50_office_classifier.pth")
 num_classes = len(CLASSES)
 
 model = models.resnet50(weights=None)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 
-checkpoint = torch.load(MODEL_PATH, map_location=device)
-if 'model_state_dict' in checkpoint:
-    model.load_state_dict(checkpoint['model_state_dict'])
-else:
-    model.load_state_dict(checkpoint)
+try:
+    checkpoint = torch.load(MODEL_PATH, map_location=device)
+    if 'model_state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
+    print("Model loaded successfully!")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    exit()
+
 model = model.to(device)
 model.eval()
 
 # GUI implementation
 class DetectionApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+    def __init__(self):  # Fixed: double underscore
+        super().__init__()  # Fixed: double underscore
         self.title("Object Detection Dashboard")
         self.geometry("950x700")
         self.resizable(False, False)
@@ -54,6 +62,7 @@ class DetectionApp(ctk.CTk):
         self.running = False
         self.cap = None
         self.prob_buffer = []
+        self.current_image = None  # To keep reference
 
         # Gradient background
         self.gradient = ctk.CTkCanvas(self, width=950, height=700, highlightthickness=0)
@@ -114,10 +123,17 @@ class DetectionApp(ctk.CTk):
         buttons_frame = ctk.CTkFrame(input_frame, fg_color="transparent")
         buttons_frame.pack(pady=(0, 15))
 
-        # Load button icons
-        upload_icon = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "//Users/adrianpothanah/python_gui/assets/upload-file.png")), size=(20, 20))
-        camera_icon = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "/Users/adrianpothanah/python_gui/assets/camera.png")), size=(20, 20))
-        stop_icon   = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "/Users/adrianpothanah/python_gui/assets/off.png")), size=(20, 20))
+        # Fixed: Use correct asset paths
+        try:
+            upload_icon = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "upload-file.png")), size=(20, 20))
+            camera_icon = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "camera.png")), size=(20, 20))
+            stop_icon   = ctk.CTkImage(Image.open(os.path.join(ASSET_PATH, "off.png")), size=(20, 20))
+        except Exception as e:
+            print(f"Icon loading error: {e}")
+            # Use default icons if custom ones don't exist
+            upload_icon = None
+            camera_icon = None
+            stop_icon = None
 
         self.upload_button = ctk.CTkButton(
             buttons_frame, text="Upload Image", width=160, fg_color="#99043F", hover_color="#411023",
@@ -137,8 +153,7 @@ class DetectionApp(ctk.CTk):
         )
         self.stop_camera_button.grid(row=0, column=2, padx=10)
 
-
-    #  Output 
+    # Output 
     def create_output_frame(self):
         output_frame = ctk.CTkFrame(self.main_frame, corner_radius=15, fg_color="#171729")
         output_frame.pack(pady=15, padx=20, fill="both", expand=True)
@@ -149,36 +164,54 @@ class DetectionApp(ctk.CTk):
         self.image_label = ctk.CTkLabel(output_frame, text="")
         self.image_label.pack(pady=10)
 
-    #  Image Upload 
+    # Image Upload 
     def upload_image(self):
         path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg")])
         if path:
-            img = Image.open(path).resize((500, 350))
-            img_tk = ctk.CTkImage(img, size=(500, 350))
-            self.image_label.configure(image=img_tk)
-            self.image_label.image = img_tk
-            self.stop_camera()
+            try:
+                pil_img = Image.open(path).convert("RGB")
+                display_img = pil_img.resize((500, 350))
+                
+                # Convert to CTkImage
+                img_tk = ctk.CTkImage(display_img, size=(500, 350))
+                self.image_label.configure(image=img_tk)
+                self.image_label.image = img_tk  # Keep reference
+                
+                self.stop_camera()
 
-            pred_class, confidence = self.predict_pil(Image.open(path).convert("RGB"))
-            self.output_label.configure(text=f"Prediction: {pred_class} ({confidence:.1f}%)")
+                pred_class, confidence = self.predict_pil(pil_img)
+                self.output_label.configure(text=f"Prediction: {pred_class} ({confidence:.1f}%)")
+                
+            except Exception as e:
+                print(f"Error loading image: {e}")
+                self.output_label.configure(text="Error loading image")
 
-    #  Camera 
+    # Camera 
     def start_camera(self):
         if not self.running:
             self.running = True
             self.cap = cv2.VideoCapture(0)
+            if not self.cap.isOpened():
+                print("Error: Could not open camera")
+                self.running = False
+                return
             threading.Thread(target=self.camera_loop, daemon=True).start()
+            print("Camera started")
 
     def camera_loop(self):
         while self.running:
             ret, frame = self.cap.read()
             if ret:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                img = Image.fromarray(frame_rgb).resize((500, 350))
-                img_tk = ctk.CTkImage(img, size=(500, 350))
+                pil_img = Image.fromarray(frame_rgb)
+                display_img = pil_img.resize((500, 350))
+                
+                # Convert to CTkImage
+                img_tk = ctk.CTkImage(display_img, size=(500, 350))
                 self.image_label.configure(image=img_tk)
-                self.image_label.image = img_tk
+                self.image_label.image = img_tk  # Keep reference
 
+                # Prediction
                 probs = self.predict_frame(frame_rgb)
                 self.prob_buffer.append(probs)
                 if len(self.prob_buffer) > 10:
@@ -191,37 +224,44 @@ class DetectionApp(ctk.CTk):
 
                 self.output_label.configure(text=f"Prediction: {pred_class} ({confidence:.1f}%)")
 
-            self.update()
+            time.sleep(0.1)  # Add small delay to prevent high CPU usage
+            
         if self.cap:
             self.cap.release()
+        print("Camera stopped")
 
     def stop_camera(self):
         self.running = False
         self.prob_buffer.clear()
-    #  Prediction 
+        print("Stopping camera...")
+
+    # Prediction 
     def predict_pil(self, pil_img):
-        img_tensor = preprocess(pil_img).unsqueeze(0).to(device)
-        with torch.no_grad():
-            outputs = model(img_tensor)
-            probs = torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()[0]
-        pred_idx = np.argmax(probs)
-        return CLASSES[pred_idx], probs[pred_idx] * 100
+        try:
+            img_tensor = preprocess(pil_img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                outputs = model(img_tensor)
+                probs = torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()[0]
+            pred_idx = np.argmax(probs)
+            return CLASSES[pred_idx], probs[pred_idx] * 100
+        except Exception as e:
+            print(f"Prediction error: {e}")
+            return "Error", 0.0
 
     def predict_frame(self, frame_array):
-        pil_img = Image.fromarray(frame_array).convert("RGB")
-        img_tensor = preprocess(pil_img).unsqueeze(0).to(device)
-        with torch.no_grad():
-            outputs = model(img_tensor)
-            probs = torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()[0]
-        return probs
+        try:
+            pil_img = Image.fromarray(frame_array).convert("RGB")
+            img_tensor = preprocess(pil_img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                outputs = model(img_tensor)
+                probs = torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()[0]
+            return probs
+        except Exception as e:
+            print(f"Frame prediction error: {e}")
+            return np.zeros(len(CLASSES))
 
-#  RUN 
-if __name__ == "__main__":
+# RUN 
+if __name__ == "__main__": 
+    print("Starting application...")
     app = DetectionApp()
     app.mainloop()
-
-
-
-
-
-
