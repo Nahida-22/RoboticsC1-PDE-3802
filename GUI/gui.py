@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from tkinter import filedialog
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 import cv2
 import threading
 import os
@@ -31,7 +31,7 @@ preprocess = transforms.Compose([
 ])
 
 # Load ResNet50 model
-MODEL_PATH = os.path.join(MODELS_PATH, "best_resNet50_office_classifier.pth")
+MODEL_PATH = os.path.join(MODELS_PATH, "best_resNet50_office_classifier_2.pth")
 num_classes = len(CLASSES)
 
 model = models.resnet50(weights=None)
@@ -51,6 +51,136 @@ except Exception as e:
 model = model.to(device)
 model.eval()
 
+# ------------------- OBJECT DETECTION FOR UPLOADED IMAGES -------------------
+
+class ObjectDetector:
+    """Handles object detection using contour-based method only for uploaded images"""
+    
+    def __init__(self):
+        self.method = 'contour'
+    
+    def detect_contour_based(self, image, conf_threshold=0.6):
+        """
+        Contour-based detection - finds objects based on edges
+        Good for objects with clear boundaries
+        """
+        img_array = np.array(image)
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # Apply adaptive thresholding
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                      cv2.THRESH_BINARY_INV, 11, 2)
+        
+        # Morphological operations to reduce noise
+        kernel = np.ones((3,3), np.uint8)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
+        
+        # Find contours
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Calculate image area for filtering
+        img_area = image.width * image.height
+        min_area = img_area * 0.01  # Minimum 1% of image
+        max_area = img_area * 0.7   # Maximum 70% of image
+        
+        detections = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area < min_area or area > max_area:
+                continue
+            
+            # Get bounding box
+            x, y, w, h = cv2.boundingRect(contour)
+            
+            # Filter by aspect ratio (reject very thin/wide boxes)
+            aspect_ratio = w / float(h) if h > 0 else 0
+            if aspect_ratio < 0.2 or aspect_ratio > 5:
+                continue
+            
+            # Add padding
+            padding = 15
+            x1 = max(0, x - padding)
+            y1 = max(0, y - padding)
+            x2 = min(image.width, x + w + padding)
+            y2 = min(image.height, y + h + padding)
+            
+            # Classify region
+            region = image.crop((x1, y1, x2, y2))
+            pred_class, confidence = self.classify_region(region)
+            
+            if confidence > conf_threshold * 100:  # Convert threshold to percentage
+                detections.append({
+                    'bbox': (x1, y1, x2, y2),
+                    'class': pred_class,
+                    'confidence': confidence,
+                    'area': area
+                })
+        
+        # Sort by confidence and area, keep best detections
+        detections = sorted(detections, key=lambda x: (x['confidence'], x['area']), reverse=True)
+        
+        # Apply Non-Maximum Suppression with stricter threshold
+        detections = self.non_max_suppression(detections, iou_threshold=0.3)
+        
+        # Limit to top 5 detections
+        return detections[:5]
+    
+    def classify_region(self, region_img):
+        """Classify a cropped region using ResNet50"""
+        try:
+            img_tensor = preprocess(region_img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                outputs = model(img_tensor)
+                probs = torch.nn.functional.softmax(outputs, dim=1).cpu().numpy()[0]
+            pred_idx = np.argmax(probs)
+            return CLASSES[pred_idx], probs[pred_idx] * 100
+        except Exception as e:
+            print(f"Classification error: {e}")
+            return "Unknown", 0.0
+    
+    def non_max_suppression(self, detections, iou_threshold=0.3):
+        """Remove overlapping bounding boxes - stricter by default"""
+        if len(detections) == 0:
+            return []
+        
+        # Sort by confidence
+        detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
+        
+        keep = []
+        while len(detections) > 0:
+            best = detections.pop(0)
+            keep.append(best)
+            
+            # Remove overlapping boxes
+            detections = [
+                d for d in detections 
+                if self.iou(best['bbox'], d['bbox']) < iou_threshold
+            ]
+        
+        return keep
+    
+    def iou(self, box1, box2):
+        """Calculate Intersection over Union"""
+        x1_min, y1_min, x1_max, y1_max = box1
+        x2_min, y2_min, x2_max, y2_max = box2
+        
+        # Intersection
+        xi_min = max(x1_min, x2_min)
+        yi_min = max(y1_min, y2_min)
+        xi_max = min(x1_max, x2_max)
+        yi_max = min(y1_max, y2_max)
+        
+        inter_area = max(0, xi_max - xi_min) * max(0, yi_max - yi_min)
+        
+        # Union
+        box1_area = (x1_max - x1_min) * (y1_max - y1_min)
+        box2_area = (x2_max - x2_min) * (y2_max - y2_min)
+        union_area = box1_area + box2_area - inter_area
+        
+        return inter_area / union_area if union_area > 0 else 0
+
 # GUI implementation
 class DetectionApp(ctk.CTk):
     def __init__(self):  # Fixed: double underscore
@@ -63,6 +193,10 @@ class DetectionApp(ctk.CTk):
         self.cap = None
         self.prob_buffer = []
         self.current_image = None  # To keep reference
+        
+        # Object detector for uploaded images only
+        self.detector = ObjectDetector()
+        self.show_detections = True
 
         # Gradient background
         self.gradient = ctk.CTkCanvas(self, width=950, height=700, highlightthickness=0)
@@ -75,6 +209,7 @@ class DetectionApp(ctk.CTk):
 
         # UI Components
         self.create_title()
+        self.create_settings_frame()
         self.create_input_frame()
         self.create_output_frame()
 
@@ -109,12 +244,57 @@ class DetectionApp(ctk.CTk):
                                 text="ResNet50 Object Detection",
                                 font=ctk.CTkFont(size=15),
                                 text_color="#A8A3C2")
-        subtitle.pack(pady=(0, 20))
+        subtitle.pack(pady=(0, 10))
+
+    # Settings Frame for Uploaded Images
+    def create_settings_frame(self):
+        settings_frame = ctk.CTkFrame(self.main_frame, corner_radius=15, fg_color="#171729")
+        settings_frame.pack(pady=10, padx=20, fill="x")
+
+        settings_label = ctk.CTkLabel(settings_frame, text="Detection Settings (for uploaded images only)",
+                                      font=ctk.CTkFont(size=15, weight="bold"))
+        settings_label.pack(pady=(10, 5))
+
+        controls_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        controls_frame.pack(pady=(0, 10))
+
+        # Toggle detection checkbox (only affects uploaded images)
+        self.detection_toggle = ctk.CTkCheckBox(
+            controls_frame,
+            text="Show Object Detection",
+            command=self.toggle_detections
+        )
+        self.detection_toggle.select()
+        self.detection_toggle.grid(row=0, column=0, padx=20)
+
+        # Confidence threshold slider (only for uploaded images)
+        threshold_label = ctk.CTkLabel(controls_frame, text="Confidence:")
+        threshold_label.grid(row=0, column=1, padx=5)
+
+        self.threshold_slider = ctk.CTkSlider(
+            controls_frame,
+            from_=0.5,
+            to=0.95,
+            number_of_steps=9
+        )
+        self.threshold_slider.set(0.75)
+        self.threshold_slider.grid(row=0, column=2, padx=5)
+
+        self.threshold_value = ctk.CTkLabel(controls_frame, text="75%")
+        self.threshold_value.grid(row=0, column=3, padx=5)
+
+        self.threshold_slider.configure(command=self.update_threshold_label)
+
+    def toggle_detections(self):
+        self.show_detections = self.detection_toggle.get()
+
+    def update_threshold_label(self, value):
+        self.threshold_value.configure(text=f"{int(float(value)*100)}%")
 
     # Buttons
     def create_input_frame(self):
         input_frame = ctk.CTkFrame(self.main_frame, corner_radius=15, fg_color="#171729")
-        input_frame.pack(pady=15, padx=20, fill="x")
+        input_frame.pack(pady=10, padx=20, fill="x")
 
         input_label = ctk.CTkLabel(input_frame, text="Choose Input",
                                 font=ctk.CTkFont(size=17, weight="bold"))
@@ -156,7 +336,7 @@ class DetectionApp(ctk.CTk):
     # Output 
     def create_output_frame(self):
         output_frame = ctk.CTkFrame(self.main_frame, corner_radius=15, fg_color="#171729")
-        output_frame.pack(pady=15, padx=20, fill="both", expand=True)
+        output_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
         self.output_label = ctk.CTkLabel(output_frame, text="", font=ctk.CTkFont(size=18))
         self.output_label.pack(pady=(10, 5))
@@ -164,29 +344,81 @@ class DetectionApp(ctk.CTk):
         self.image_label = ctk.CTkLabel(output_frame, text="")
         self.image_label.pack(pady=10)
 
-    # Image Upload 
+    def draw_detections(self, image, detections):
+        """Draw bounding boxes and labels on image - for uploaded images only"""
+        draw_img = image.copy()
+        draw = ImageDraw.Draw(draw_img)
+        
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', 
+                  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52C93F']
+        
+        for i, det in enumerate(detections):
+            bbox = det['bbox']
+            label = f"{det['class']}: {det['confidence']:.1f}%"
+            color = colors[i % len(colors)]
+            
+            # Draw rectangle
+            draw.rectangle(bbox, outline=color, width=3)
+            
+            # Draw label background
+            try:
+                font = ImageFont.truetype("arial.ttf", 16)
+            except:
+                font = ImageFont.load_default()
+            
+            text_bbox = draw.textbbox((bbox[0], bbox[1]), label, font=font)
+            draw.rectangle(
+                [bbox[0], bbox[1] - 25, text_bbox[2] + 10, bbox[1]],
+                fill=color
+            )
+            draw.text((bbox[0] + 5, bbox[1] - 22), label, fill='white', font=font)
+        
+        return draw_img
+
+    # Image Upload with Object Detection
     def upload_image(self):
         path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.png *.jpeg")])
         if path:
             try:
                 pil_img = Image.open(path).convert("RGB")
-                display_img = pil_img.resize((500, 350))
-                
-                # Convert to CTkImage
-                img_tk = ctk.CTkImage(display_img, size=(500, 350))
-                self.image_label.configure(image=img_tk)
-                self.image_label.image = img_tk  # Keep reference
-                
                 self.stop_camera()
 
-                pred_class, confidence = self.predict_pil(pil_img)
-                self.output_label.configure(text=f"Prediction: {pred_class} ({confidence:.1f}%)")
+                if self.show_detections:
+                    # Perform object detection using contour method
+                    conf_threshold = self.threshold_slider.get()
+                    
+                    detections = self.detector.detect_contour_based(
+                        pil_img, conf_threshold=conf_threshold
+                    )
+                    
+                    # Draw bounding boxes
+                    display_img = self.draw_detections(pil_img, detections)
+                    display_img = display_img.resize((500, 350))
+                    
+                    # Update output label
+                    if detections:
+                        det_text = f"Found {len(detections)} object(s): " + \
+                                  ", ".join([f"{d['class']} ({d['confidence']:.1f}%)" 
+                                           for d in detections])
+                        self.output_label.configure(text=det_text)
+                    else:
+                        self.output_label.configure(text="No objects detected")
+                else:
+                    # Simple classification without bounding boxes
+                    display_img = pil_img.resize((500, 350))
+                    pred_class, confidence = self.detector.classify_region(pil_img)
+                    self.output_label.configure(text=f"Prediction: {pred_class} ({confidence:.1f}%)")
+                
+                # Display image
+                img_tk = ctk.CTkImage(display_img, size=(500, 350))
+                self.image_label.configure(image=img_tk)
+                self.image_label.image = img_tk
                 
             except Exception as e:
                 print(f"Error loading image: {e}")
-                self.output_label.configure(text="Error loading image")
+                self.output_label.configure(text=f"Error: {e}")
 
-    # Camera 
+    # Camera - EXACTLY THE SAME AS YOUR ORIGINAL CODE
     def start_camera(self):
         if not self.running:
             self.running = True
@@ -235,7 +467,7 @@ class DetectionApp(ctk.CTk):
         self.prob_buffer.clear()
         print("Stopping camera...")
 
-    # Prediction 
+    # Prediction - EXACTLY THE SAME AS YOUR ORIGINAL CODE
     def predict_pil(self, pil_img):
         try:
             img_tensor = preprocess(pil_img).unsqueeze(0).to(device)
