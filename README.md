@@ -69,7 +69,7 @@ Ensure you have Python 3.10.11, this is what was used as the virtual environmmen
 
 After installing all librairies, we will go through our dataset creation:
 
-    1. Images were collected from the internet through various sites
+    1. Images were collected from the internet through various sites, video frames and a script to download images (In folder Download_images_script)
     2. Those images were assigned a specific class ("Pen", "Water Bottle", "Stapler", etc..)
     4. The number of images in each class folder was checked to determine if data augmentation  was needed and to identify classes with fewer images.
     5. Since some images have been taken from the internet, and others were captured from mobile phone camera, the images are of different sizes. Therefore, resizing is important before training a machine learning model as it makes the dataset uniform, memory-efficient, and compatible with the model architecture, which is crucial for effective training.
