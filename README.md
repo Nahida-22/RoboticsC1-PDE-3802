@@ -2,6 +2,9 @@
 
 This readme file gives a whole overview of how this project was done, starting with the images collection, data cleaning, augmentation and data splitting for training (CNN and Transfer Learning). Evaluation metrics were also displayed for each model training. We also have a GUI for file upload and live camera, which guesses what is the object being shown.
 
+Refer to imageProcessingFinal.ipynb for more detailed documentation and to see testing of different models trained.
+Perfomance metrics have also been attached in the report Annex with documentation analysis.
+Git Hub repo link: https://github.com/Nahida-22/RoboticsC1-PDE-3802.git
 
 # Running Instructions (Python 3.10)
 
@@ -355,7 +358,5 @@ What our code does in simple terms:
 
 Our new model measures performance on truly unseen images, it avoids evaluation contamination(duplicates and near-duplicates) that trains the model to memorize instead of learning generalizable features and it gives stable ablations going forward.
 
-Refer to imageProcessingFinal.ipynb for more detailed documentation and to see testing of different models trained.
 
-Git Hub repo link: https://github.com/Nahida-22/RoboticsC1-PDE-3802.git
 
