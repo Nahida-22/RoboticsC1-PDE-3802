@@ -24,13 +24,13 @@ After installing all librairies, we will go through our dataset creation:
 
     1. Images were collected from the internet through various sites
     2. Those images were assigned a specific class ("Pen", "Water Bottle", "Stapler", etc..)
-    3. After that each image was renamed depending on the class they belong to, for e.g. pen0001.jpg, etc...
-    4. After renaming and organising images, the number of images in each class folder was checked to determine if data augmentation  was needed and to identify classes with fewer images.
+    4. The number of images in each class folder was checked to determine if data augmentation  was needed and to identify classes with fewer images.
     5. Since some images have been taken from the internet, and others were captured from mobile phone camera, the images are of different sizes. Therefore, resizing is important before training a machine learning model as it makes the dataset uniform, memory-efficient, and compatible with the model architecture, which is crucial for effective training.
     6. 224×224 is chosen because it is a good compromise between preserving object detail and computational efficiency, and it matches the input size of most pre-trained models used for transfer learning, and then saved to "processed" folder
     7. It can be deduced that there is a class imbalance. Some classes may have fewer images than others, indicating that data augmentation or additional data collection is needed to balance the dataset. Classes with a low number of images  for e.g paper clips, are candidates for augmentation to increase training data and improve model performance.
     8. For augmentation, rotate, flip and change hue was used to create more images for imbalanced classes, and then saved to "augmented" folder.
-    9. After using augmentation, the dataset (augmented) was splitted. (train=80%, test=15% and val=5%)
+    9. After using augmentation, each image was renamed depending on the class they belong to, for e.g. pen0001.jpg, etc... 
+    10. Then, the dataset (augmented) was splitted. (train=80%, test=15% and val=5%)
 
 # IMAGES PER CLASSES BEFORE AUGMENTATION
 
@@ -307,6 +307,51 @@ What our code does in simple terms:
 
 
 Our new model measures performance on truly unseen images, it avoids evaluation contamination(duplicates and near-duplicates) that trains the model to memorize instead of learning generalizable features and it gives stable ablations going forward.
+
+
+# Running Instructions (Python 3.10)
+
+1. Install dependencies: 
+
+2. If you only want to run the GUI, you don’t need TensorFlow or seaborn/pandas.
+    pip install --upgrade pip
+    pip install customtkinter pillow opencv-python numpy tqdm scikit-learn
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    # (If you have CUDA or Apple Silicon MPS, use the install selector on pytorch.org instead)
+
+If you will run notebook, you will find the required librairies to install documented there.
+
+3. Ensure project structure & model files
+        RoboticsC1-PDE-3802/
+        ├─ GUI/
+        │  ├─ assets/
+        │  │  ├─ object.png
+        │  │  ├─ camera.png
+        │  │  ├─ off.png
+        │  │  └─ upload-file.png
+        │  └─ gui.py
+        └─ Notebooks/
+        └─ models/
+            ├─ best.pth               
+                    
+4. Configure paths (if needed)
+
+5. Run the GUI
+    cd GUI
+    python gui.py
+
+6. Notes & troubleshooting
+
+    PyTorch build: If you have CUDA or Apple Silicon (MPS), install PyTorch using the command from pytorch.org
+    for your hardware.
+
+    Camera permissions (macOS): System Settings → Privacy & Security → Camera → allow Terminal/Python.
+
+    Model not found: On startup, the app prints which files it found in outputs_resnet50_clean. Ensure at least best.pth or model_scripted.pt exists.
+
+    Fonts: If arial.ttf isn’t available, the GUI falls back to the default font automatically.
+
+    Python version: This project was developed on Python 3.10; use 3.10.x for best compatibility.
 
 
 
