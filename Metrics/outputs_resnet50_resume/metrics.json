@@ -1,0 +1,91 @@
+{
+  "test_acc": 99.88888888888889,
+  "test_macro_f1": 0.998889377513137,
+  "per_class": {
+    "eraser": {
+      "precision": 0.9933774834437086,
+      "recall": 1.0,
+      "f1-score": 0.9966777408637874,
+      "support": 450.0
+    },
+    "glueStick": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 450.0
+    },
+    "mouse": {
+      "precision": 0.9977827050997783,
+      "recall": 1.0,
+      "f1-score": 0.9988901220865705,
+      "support": 450.0
+    },
+    "paperClip": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 450.0
+    },
+    "pen": {
+      "precision": 0.9977777777777778,
+      "recall": 0.9977777777777778,
+      "f1-score": 0.9977777777777778,
+      "support": 450.0
+    },
+    "pencilBox": {
+      "precision": 1.0,
+      "recall": 0.9977777777777778,
+      "f1-score": 0.9988876529477196,
+      "support": 450.0
+    },
+    "pencilSharpener": {
+      "precision": 1.0,
+      "recall": 0.9955555555555555,
+      "f1-score": 0.9977728285077951,
+      "support": 450.0
+    },
+    "scissor": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 450.0
+    },
+    "stapler": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 450.0
+    },
+    "waterBottle": {
+      "precision": 1.0,
+      "recall": 0.9977777777777778,
+      "f1-score": 0.9988876529477196,
+      "support": 450.0
+    },
+    "accuracy": 0.9988888888888889,
+    "macro avg": {
+      "precision": 0.9988937966321265,
+      "recall": 0.9988888888888889,
+      "f1-score": 0.998889377513137,
+      "support": 4500.0
+    },
+    "weighted avg": {
+      "precision": 0.9988937966321264,
+      "recall": 0.9988888888888889,
+      "f1-score": 0.998889377513137,
+      "support": 4500.0
+    }
+  },
+  "classes": [
+    "eraser",
+    "glueStick",
+    "mouse",
+    "paperClip",
+    "pen",
+    "pencilBox",
+    "pencilSharpener",
+    "scissor",
+    "stapler",
+    "waterBottle"
+  ]
+}
