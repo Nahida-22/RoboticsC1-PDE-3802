@@ -1,0 +1,79 @@
+{
+  "test_acc": 99.8,
+  "test_macro_f1": 0.9979977564193527,
+  "per_class": {
+    "eraser": {
+      "precision": 0.9966666666666667,
+      "recall": 0.9966666666666667,
+      "f1-score": 0.9966666666666667,
+      "support": 300.0
+    },
+    "glueStick": {
+      "precision": 0.9966777408637874,
+      "recall": 1.0,
+      "f1-score": 0.9983361064891847,
+      "support": 300.0
+    },
+    "mouse": {
+      "precision": 0.9933774834437086,
+      "recall": 1.0,
+      "f1-score": 0.9966777408637874,
+      "support": 300.0
+    },
+    "paperClip": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 300.0
+    },
+    "pen": {
+      "precision": 1.0,
+      "recall": 0.99,
+      "f1-score": 0.9949748743718593,
+      "support": 300.0
+    },
+    "pencilBox": {
+      "precision": 0.9966666666666667,
+      "recall": 1.0,
+      "f1-score": 0.998330550918197,
+      "support": 299.0
+    },
+    "pencilSharpener": {
+      "precision": 0.9966777408637874,
+      "recall": 1.0,
+      "f1-score": 0.9983361064891847,
+      "support": 300.0
+    },
+    "scissor": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 300.0
+    },
+    "stapler": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 301.0
+    },
+    "waterBottle": {
+      "precision": 1.0,
+      "recall": 0.9933333333333333,
+      "f1-score": 0.9966555183946488,
+      "support": 300.0
+    },
+    "accuracy": 0.998,
+    "macro avg": {
+      "precision": 0.9980066298504617,
+      "recall": 0.998,
+      "f1-score": 0.9979977564193527,
+      "support": 3000.0
+    },
+    "weighted avg": {
+      "precision": 0.9980077409615726,
+      "recall": 0.998,
+      "f1-score": 0.9979983129023801,
+      "support": 3000.0
+    }
+  }
+}
