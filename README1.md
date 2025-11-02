@@ -3,6 +3,53 @@
 This readme file gives a whole overview of how this project was done, starting with the images collection, data cleaning, augmentation and data splitting for training (CNN and Transfer Learning). Evaluation metrics were also displayed for each model training. We also have a GUI for file upload and live camera, which guesses what is the object being shown.
 
 
+# Running Instructions (Python 3.10)
+
+1. Install dependencies: 
+
+2. If you only want to run the GUI, you don’t need TensorFlow or seaborn/pandas.
+    pip install --upgrade pip
+    pip install customtkinter pillow opencv-python numpy tqdm scikit-learn
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    # (If you have CUDA or Apple Silicon MPS, use the install selector on pytorch.org instead)
+
+If you will run notebook, you will find the required librairies to install documented there.
+
+3. Ensure project structure & model files
+        RoboticsC1-PDE-3802/
+        ├─ GUI/
+        │  ├─ assets/
+        │  │  ├─ object.png
+        │  │  ├─ camera.png
+        │  │  ├─ off.png
+        │  │  └─ upload-file.png
+        │  └─ gui.py
+        └─ Notebooks/
+        └─ models/
+            ├─ best.pth               
+                    
+4. Configure paths (if needed)
+
+5. Run the GUI
+    cd GUI
+    python gui.py
+
+6. Notes & troubleshooting
+
+    PyTorch build: If you have CUDA or Apple Silicon (MPS), install PyTorch using the command from pytorch.org
+    for your hardware.
+
+    Camera permissions (macOS): System Settings → Privacy & Security → Camera → allow Terminal/Python.
+
+    Model not found: On startup, the app prints which files it found in outputs_resnet50_clean. Ensure at least best.pth or model_scripted.pt exists.
+
+    Fonts: If arial.ttf isn’t available, the GUI falls back to the default font automatically.
+
+    Python version: This project was developed on Python 3.10; use 3.10.x for best compatibility.
+
+
+
+
 # Library installation 
 
 Ensure you have Python 3.10.11, this is what was used as the virtual environmment.
@@ -308,50 +355,4 @@ What our code does in simple terms:
 
 Our new model measures performance on truly unseen images, it avoids evaluation contamination(duplicates and near-duplicates) that trains the model to memorize instead of learning generalizable features and it gives stable ablations going forward.
 
-
-# Running Instructions (Python 3.10)
-
-1. Install dependencies: 
-
-2. If you only want to run the GUI, you don’t need TensorFlow or seaborn/pandas.
-    pip install --upgrade pip
-    pip install customtkinter pillow opencv-python numpy tqdm scikit-learn
-    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-    # (If you have CUDA or Apple Silicon MPS, use the install selector on pytorch.org instead)
-
-If you will run notebook, you will find the required librairies to install documented there.
-
-3. Ensure project structure & model files
-        RoboticsC1-PDE-3802/
-        ├─ GUI/
-        │  ├─ assets/
-        │  │  ├─ object.png
-        │  │  ├─ camera.png
-        │  │  ├─ off.png
-        │  │  └─ upload-file.png
-        │  └─ gui.py
-        └─ Notebooks/
-        └─ models/
-            ├─ best.pth               
-                    
-4. Configure paths (if needed)
-
-5. Run the GUI
-    cd GUI
-    python gui.py
-
-6. Notes & troubleshooting
-
-    PyTorch build: If you have CUDA or Apple Silicon (MPS), install PyTorch using the command from pytorch.org
-    for your hardware.
-
-    Camera permissions (macOS): System Settings → Privacy & Security → Camera → allow Terminal/Python.
-
-    Model not found: On startup, the app prints which files it found in outputs_resnet50_clean. Ensure at least best.pth or model_scripted.pt exists.
-
-    Fonts: If arial.ttf isn’t available, the GUI falls back to the default font automatically.
-
-    Python version: This project was developed on Python 3.10; use 3.10.x for best compatibility.
-
-
-
+Refer to imageProcessingFinal.ipynb for more detailed documentation.
