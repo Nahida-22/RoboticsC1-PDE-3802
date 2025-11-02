@@ -355,4 +355,7 @@ What our code does in simple terms:
 
 Our new model measures performance on truly unseen images, it avoids evaluation contamination(duplicates and near-duplicates) that trains the model to memorize instead of learning generalizable features and it gives stable ablations going forward.
 
-Refer to imageProcessingFinal.ipynb for more detailed documentation.
+Refer to imageProcessingFinal.ipynb for more detailed documentation and to see testing of different models trained.
+
+Git Hub repo link: https://github.com/Nahida-22/RoboticsC1-PDE-3802.git
+
