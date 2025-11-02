@@ -20,10 +20,15 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 # Folder that contains GUI asset images.
-ASSET_PATH = "/Users/adrianpothanah/Coursework/RoboticsC1-PDE-3802/GUI/assets"
+# Automatically resolve paths relative to this file
+BASE_DIR = Path(__file__).resolve().parent
+
+# Folder that contains GUI asset images
+ASSET_PATH = BASE_DIR / "assets"
+
 
 # Models folder
-MODELS_PATH = Path("/Users/adrianpothanah/Coursework/RoboticsC1-PDE-3802/Notebooks/outputs_resnet50_clean")
+MODELS_PATH = BASE_DIR.parent / "models" 
 
 IMG_SIZE = 224
 
